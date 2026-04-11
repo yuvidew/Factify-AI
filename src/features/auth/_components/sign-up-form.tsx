@@ -62,7 +62,7 @@ export const SignUpForm = () => {
     }
 
     return (
-        <div className="flex flex-col gap-6">
+        <section className="flex flex-col gap-6">
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                     <FieldGroup>
@@ -204,6 +204,6 @@ export const SignUpForm = () => {
                 By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
                 and <a href="#">Privacy Policy</a>.
             </FieldDescription>
-        </div>
+        </section>
     )
 }

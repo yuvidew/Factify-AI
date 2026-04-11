@@ -91,9 +91,9 @@ export const SignInForm = () => {
                                 <FormItem>
                                     <div className="flex items-center justify-between">
                                         <FormLabel>Password</FormLabel>
-                                        <a href="#" className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline">
+                                        <Link href="/verify-email" className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline">
                                             Forgot password?
-                                        </a>
+                                        </Link>
                                     </div>
                                     <FormControl className="relative">
                                         <Input

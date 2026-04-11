@@ -32,6 +32,24 @@ export async function createSessionClient() {
 
 };
 
+// Create a session client with a provided session cookie (for use in Hono routes)
+export function createSessionClientWithCookie(sessionCookie: string) {
+    const client = new Client()
+        .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+        .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
+    
+    client.setSession(sessionCookie);
+
+    return {
+        get account() {
+            return new Account(client);
+        },
+        get databases() {
+            return new Databases(client);
+        },
+    };
+}
+
 export async function createAdminClient() {
     const client = new Client()
         .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)

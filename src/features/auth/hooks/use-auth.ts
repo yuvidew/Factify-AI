@@ -1,5 +1,5 @@
 import { client } from "@/lib/rpc";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient} from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -24,7 +24,7 @@ import {
 // The useSignIn hook manages the user sign-in process. It sends a POST request to the sign-in endpoint with the user's email and password. If the sign-in is successful, it redirects the user to the home page. If there's an error during sign-in, it shows a toast notification with the error message.
 export const useSignIn = () => {
     const router = useRouter();
-    // const queryClient = useQueryClient();
+    const queryClient = useQueryClient();
 
     const mutation = useMutation<SignInResponseType, Error, SignInRequestType>({
         mutationFn: async (data) => {
@@ -32,7 +32,7 @@ export const useSignIn = () => {
             return response.json();
         },
         onSuccess: () => {
-            // queryClient.invalidateQueries(["auth", "me"]);
+            queryClient.invalidateQueries({ queryKey: ["current-user"] });
             router.push("/");
         },
         onError: (error) => {
@@ -46,7 +46,6 @@ export const useSignIn = () => {
 // The useSignUp hook handles user registration. It sends a POST request to the sign-up endpoint with the user's name, email, and password. On successful registration, it redirects the user to the home page. If there's an error during registration, it shows a toast notification with the error message.
 export const useSignUp = () => {
     const router = useRouter();
-    // const queryClient = useQueryClient();
 
     const mutation = useMutation<SignUpResponseType, Error, SignUpRequestType>({
         mutationFn: async (data) => {
@@ -54,7 +53,6 @@ export const useSignUp = () => {
             return response.json();
         },
         onSuccess: () => {
-            // queryClient.invalidateQueries(["auth", "me"]);
             router.push("/");
         },
         onError: (error) => {
@@ -68,7 +66,6 @@ export const useSignUp = () => {
 // The useLogOut hook manages the user log-out process. It sends a POST request to the log-out endpoint, and on success, it redirects the user to the sign-in page. If there's an error during log-out, it displays a toast notification with the error message.
 export const useLogOut = () => {
     const router = useRouter();
-    // const queryClient = useQueryClient();
 
     const mutation = useMutation<LogOutResponseType, Error, LogOutRequestType>({
         mutationFn: async () => {
@@ -76,7 +73,6 @@ export const useLogOut = () => {
             return response.json();
         },
         onSuccess: () => {
-            // queryClient.invalidateQueries(["auth", "me"]);
             router.push("/sign-in");
         },
         onError: (error) => {

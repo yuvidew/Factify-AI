@@ -1,12 +1,42 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { resendOtpSchema, resetPasswordSchema, signInSchema, signUpSchema, verifyEmailSchema, verifyOtpSchema } from "../schemes";
-import { createAdminClient, createSessionClient } from "@/lib/appwrite";
+import {
+    resendOtpSchema,
+    resetPasswordSchema,
+    signInSchema,
+    signUpSchema,
+    verifyEmailSchema,
+    verifyOtpSchema,
+} from "../schemes";
+import { createAdminClient, createSessionClientWithCookie } from "@/lib/appwrite";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { AUTH_COOKIE } from "@/lib/constants";
-import { Account, Client, ID } from "node-appwrite";
+import { ID } from "node-appwrite";
 
 const app = new Hono()
+    .get("/current-user", async (c) => {
+        const sessionCookie = getCookie(c, AUTH_COOKIE);
+        if (!sessionCookie) {
+            return c.json({ user: null });
+        }
+        try {
+            const { account } = createSessionClientWithCookie(sessionCookie);
+            const user = await account.get();
+            
+            return c.json({ 
+                user: {
+                    id: user.$id,
+                    name: user.name,
+                    email: user.email,
+                    emailVerification: user.emailVerification,
+                    prefs: user.prefs, // Can store avatarUrl in prefs
+                }
+            });
+        } catch {
+            // Session is invalid or expired, return null user
+            return c.json({ user: null });
+        }
+    })
     .post("/sign-in", zValidator("json", signInSchema), async (c) => {
         const { email, password } = c.req.valid("json");
 
@@ -41,7 +71,6 @@ const app = new Hono()
         });
 
         return c.json({ success: true });
-
     })
     .post("/verify-email", zValidator("json", verifyEmailSchema), async (c) => {
         const { email } = c.req.valid("json");
@@ -78,46 +107,51 @@ const app = new Hono()
             const token = await account.createEmailToken(userId, user.email);
             return c.json({ success: true, userId: token.userId });
         } catch (error) {
-            return c.json({ error: `Failed to resend OTP ${error instanceof Error ? error.message : "Unknown error"}` }, 500);
+            return c.json(
+                {
+                    error: `Failed to resend OTP ${error instanceof Error ? error.message : "Unknown error"}`,
+                },
+                500,
+            );
         }
     })
-    
-    .post("/reset-password", zValidator("json", resetPasswordSchema), async (c) => {
-        const { password } = c.req.valid("json");
+    .post(
+        "/reset-password",
+        zValidator("json", resetPasswordSchema),
+        async (c) => {
+            const { password } = c.req.valid("json");
 
-        const sessionCookie = getCookie(c, AUTH_COOKIE);
-        if (!sessionCookie) {
-            return c.json({ error: "Unauthorized" }, 401);
-        }
+            const sessionCookie = getCookie(c, AUTH_COOKIE);
+            if (!sessionCookie) {
+                return c.json({ error: "Unauthorized" }, 401);
+            }
 
-        try {
-            const client = new Client()
-                .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-                .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
-            client.setSession(sessionCookie);
-
-            const account = new Account(client);
-            await account.updatePassword(password);
-            return c.json({ success: true });
-        } catch (error) {
-            return c.json({ error: `Failed to reset password ${error instanceof Error ? error.message : "Unknown error"}` }, 500);
-        }
-    })
+            try {
+                const { account } = createSessionClientWithCookie(sessionCookie);
+                await account.updatePassword(password);
+                return c.json({ success: true });
+            } catch (error) {
+                return c.json(
+                    {
+                        error: `Failed to reset password ${error instanceof Error ? error.message : "Unknown error"}`,
+                    },
+                    500,
+                );
+            }
+        },
+    )
     .post("/log-out", async (c) => {
         const sessionCookie = getCookie(c, AUTH_COOKIE);
 
         try {
             if (sessionCookie) {
-                const client = new Client()
-                    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-                    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
-                client.setSession(sessionCookie);
-
-                const account = new Account(client);
+                const { account } = createSessionClientWithCookie(sessionCookie);
                 await account.deleteSession("current");
             }
         } catch (error) {
-            throw new Error(`Failed to log out ${error instanceof Error ? error.message : "Unknown error"}`);
+            throw new Error(
+                `Failed to log out ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
         }
 
         deleteCookie(c, AUTH_COOKIE, {
